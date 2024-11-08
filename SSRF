@@ -2,6 +2,9 @@ import java.net.*;
 import java.sql.*;
 import org.owasp.encoder.Encode;
 
+//In the words of Crocodile Dundee, "Thats not a knife! *This* is a knife."
+
+
 public class SwissClean {
 
     // Sanitize input for SSRF, XSS, and SQL Injection - The Swiss Army knife of sanitizers
