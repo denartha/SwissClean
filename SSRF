@@ -1,15 +1,60 @@
+import java.net.*;
+import java.sql.*;
+import org.owasp.encoder.Encode;
+
 public class SwissClean {
 
+    // Sanitize input for SSRF, XSS, and SQL Injection - The Swiss Army knife of sanitizers
     public static String sanitizeInput(String input) {
         if (input == null) {
             return null;
         }
-        
-        // Remove all occurrences of ":/", "./", and "../" from the string.
-        // Use regular expressions for pattern matching and replacement.
-        input = input.replaceAll(":/", "");
-        input = input.replaceAll("\\.\\./", "");
-        input = input.replaceAll("\\./", "");
-        
+
+        // 1. SSRF Protection - Sanitize URL inputs
+        input = sanitizeForSSRF(input);
+
+        // 2. XSS Protection - Escape special characters to prevent HTML/JS injection
+        input = sanitizeForXSS(input);
+
+        // 3. SQL Injection Protection - Escape or sanitize input for safe SQL usage
+        input = sanitizeForSQLInjection(input);
+
         return input;
     }
+
+    // SSRF Protection: Block unwanted URL patterns or internal IP addresses
+    private static String sanitizeForSSRF(String input) {
+        try {
+            URL url = new URL(input);
+            url.toURI();  // Check if URL is well-formed
+
+            // Block localhost and internal IP addresses (e.g., 127.0.0.1, 192.168.*, etc.)
+            String host = url.getHost();
+            if (host.equals("localhost") || host.equals("127.0.0.1") || host.startsWith("192.168.") || host.startsWith("10.")) {
+                return "";  // Empty string or throw exception to block SSRF attempts
+            }
+        } catch (MalformedURLException | URISyntaxException e) {
+            // Invalid URL or URL parsing error means input is not a valid URL, safe to keep as is
+        }
+
+        return input;
+    }
+
+    // XSS Protection: Escape HTML special characters to prevent JS injection
+    private static String sanitizeForXSS(String input) {
+        // Use OWASP Java Encoder library for safe HTML encoding
+        return Encode.forHtml(input);  // Escapes <, >, ", ', &, etc.
+    }
+
+    // SQL Injection Protection: Prevent SQL injection by escaping or using safe methods
+    private static String sanitizeForSQLInjection(String input) {
+        // Prevent SQL injection by escaping special characters (e.g., ', ", --, etc.)
+        // NOTE: The proper solution is to use PreparedStatement in your SQL queries, but here we escape special characters.
+        if (input == null) {
+            return null;
+        }
+        return input.replaceAll("'", "''")  // Escape single quotes
+                    .replaceAll("\"", "\\\"")    // Escape double quotes
+                    .replaceAll("--", "");       // Remove SQL comment syntax
+    }
+}
